@@ -126,32 +126,104 @@ def collect_channel_stats(youtube, channel_ids):
     return pd.DataFrame(all_data)
 
 
-def get_channel_comments(youtube, video_id):
+
+def get_all_channel_comments(youtube, video_id):
     """
-    Get comments and usernames for a specific video
-    
-    Params:
-    
-    youtube: the build object from googleapiclient.discovery
-    video_id: ID of the video
-    
+    Get all comments along with usernames for a specific video.
+
+    This function retrieves all comments along with the usernames for the specified video by utilizing pagination
+    (if available) to fetch all comments.
+
+    Args:
+        youtube: The build object from googleapiclient.discovery.
+        video_id: The ID of the video for which comments will be retrieved.
+
     Returns:
-    List of dictionaries containing 'Kullanıcı Adı' (Username) and 'Yorum' (Comment) for the specified video
+        comments: A list of dictionaries containing 'Comment' (the comment text) and 'User Name' (the username).
     """
     comments = []
+    next_page_token = None
 
-    request = youtube.commentThreads().list(
-        part="snippet",
-        videoId=video_id,
-        maxResults=100
-    )
-    response = request.execute()
+    while True:
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            pageToken=next_page_token
+        )
+        response = request.execute()
 
-    for item in response['items']:
-        comment_info = {
-            'Yorum': item['snippet']['topLevelComment']['snippet']['textDisplay']
-        }
-        comments.append(comment_info)
-        
+        for item in response['items']:
+            comment_info = {
+                'Comment': item['snippet']['topLevelComment']['snippet']['textDisplay'],
+                'User Name': item['snippet']['topLevelComment']['snippet']['authorDisplayName']  # Kullanıcı adını ekleyin
+            }
+            comments.append(comment_info)
+
+        next_page_token = response.get('nextPageToken')
+
+        if not next_page_token:
+            break
+
     return comments
 
+
+
+def get_comment_length(comments):
+
+    """Returns a list of calculated comment lengths.
+
+    This function calculates the length of each comment in the provided list of comments and returns a list of comment lengths.
+
+    Args:
+        comments: A list containing comments. Each comment should be a dictionary with the key 'Comment'.
+
+    Returns:
+        comment_lengths: A list containing the length of comments.
+    """
+    comment_lengths = []
+
+    for comment in comments:
+       comment_length = len(comment['Comment'])  # calculated comment lengths
+       comment_lengths.append(comment_length)  # adds the calculated length to the list
+
+    return comment_lengths
+
+
+
+def get_all_comments_statistics(youtube, video_id):
+    """
+    Returns a dictionary containing the count of unique comments made by each user for a specific video.
+
+    It calculates the count of unique comments made by each user and stores this information in a dictionary.
+
+    Args:
+        youtube: The build object from googleapiclient.discovery.
+        video_id: ID of the video for which comments will be retrieved.
+
+    Returns:
+        comments_statistics: A dictionary where keys are usernames and values are counts of unique comments made by each user.
+    """
+    comments_statistics = {}
+    next_page_token = None
+
+    while True:
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            pageToken=next_page_token
+        )
+        response = request.execute()
+
+        for item in response['items']:
+            username = item['snippet']['topLevelComment']['snippet']['authorDisplayName']
+            if username in comments_statistics:
+                comments_statistics[username] += 1
+            else:
+                comments_statistics[username] = 1
+
+        next_page_token = response.get('nextPageToken')
+
+        if not next_page_token:
+            break
+        
+    return comments_statistics
