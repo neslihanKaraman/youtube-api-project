@@ -227,3 +227,41 @@ def get_all_comments_statistics(youtube, video_id):
             break
         
     return comments_statistics
+
+
+def get_playlist_videos_names(youtube, playlist_id):
+    """
+    Retrieves the titles of all videos within a specified playlist.
+
+    Iteratively fetches videos from the YouTube API, handling pagination
+    to ensure all videos are retrieved.
+
+    Args:
+        youtube: The authenticated YouTube API service instance.
+        playlist_id: The ID of the playlist to retrieve videos from.
+
+    Returns:
+        A list of video titles, where each title represents a video
+        within the specified playlist.
+    """
+    response = youtube.playlistItems().list(
+        part="snippet",
+        playlistId=playlist_id,
+        maxResults=50,
+    ).execute()
+
+    video_names = []
+    while "nextPageToken" in response:
+        for item in response["items"]:
+            video_names.append(item["snippet"]["title"])
+
+        response = youtube.playlistItems().list(
+            part="snippet",
+            playlistId=playlist_id,
+            maxResults=50,
+            pageToken=response["nextPageToken"],
+        ).execute()
+
+    return video_names
+
+
