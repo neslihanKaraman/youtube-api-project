@@ -45,6 +45,27 @@ def collect_video_ids(youtube, playlist_id):
         
     return video_ids
 
+def get_video_info(youtube,video_id):
+    """
+    Fetches metadata information for a specific video 
+
+    Parameters:
+    - youtube: An initialized instance of googleapiclient.discovery object for YouTube Data API interaction.
+    - video_id: A string representing the unique identifier of the video for which metadata is to be fetched.
+
+    Returns:
+    A tuple containing the title and description of the specified video if found. If the video does not exist,
+    the function returns a string indicating 'Video not found'.
+    """
+    request = youtube.videos().list(part='snippet', id=video_id)
+    response = request.execute()
+
+    if response['items']:
+        title = response['items'][0]['snippet']['title']
+        description = response['items'][0]['snippet']['description']
+        return title, description
+    else:
+        return "Video not found"
 
 def collect_video_details(youtube, video_ids):
     """
