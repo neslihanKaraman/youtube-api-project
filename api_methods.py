@@ -286,3 +286,72 @@ def get_playlist_videos_names(youtube, playlist_id):
     return video_names
 
 
+def get_video_interaction(youtube, video_id):
+    ''' A function that retrieves the view count and like count for a specified video.
+
+    Args:
+    - youtube: The googleapiclient.discovery object used to communicate with the YouTube Data API.
+    - video_id: The unique identifier for the video from which information will be retrieved.
+
+    Returns:
+    - video_info: If the information is available, it returns a dictionary containing the view count and like count for the video.
+                  If the information cannot be retrieved, it returns None.
+'''
+   
+    request = youtube.videos().list(
+        part="statistics",
+        id=video_id
+    )
+    response = request.execute()
+
+    if response['items']:
+        video_info = {
+            'video_id': video_id,
+            'viewCount': response['items'][0]['statistics'].get('viewCount', None),
+            'likeCount': response['items'][0]['statistics'].get('likeCount', None)
+        }
+        return video_info
+    else:
+        return None
+    
+
+def get_playlist_videos_interaction(youtube, playlist_id):
+    '''  A function that collects information regarding the interaction metrics (view count and like count)
+        for all videos in a specified playlist.
+
+    Args:
+    - youtube: The googleapiclient.discovery object used to communicate with the YouTube Data API.
+    - playlist_id: The identifier for the playlist from which video information will be collected.
+
+    Returns:
+    - video_stats: A list containing dictionaries for each video in the playlist that could be fetched successfully.
+                   Each dictionary contains video-specific interaction metrics such as 'video_id', 'viewCount', and 'likeCount'.
+    '''
+    video_stats = []
+    request = youtube.playlistItems().list(
+        part="contentDetails",
+        playlistId=playlist_id,
+        maxResults=50
+    )
+    response = request.execute()
+
+    while True:
+        for item in response['items']:
+            video_id = item['contentDetails']['videoId']
+            video_info = get_video_interaction(youtube, video_id)
+            if video_info: 
+                video_stats.append(video_info)
+
+        next_page_token = response.get('nextPageToken')
+        if not next_page_token:
+            break
+
+        request = youtube.playlistItems().list(
+            part="contentDetails",
+            playlistId=playlist_id,
+            maxResults=50,
+            pageToken=next_page_token
+        )
+        response = request.execute()
+
+    return video_stats
